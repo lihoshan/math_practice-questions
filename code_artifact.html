@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🍄 梯形面積分層手寫投射互動課堂 (瑪利歐風格)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zen+Maru+Gothic:wght@700;900&display=swap');
+
+    :root {
+      --mario-red: #E52521;
+      --mario-blue: #2267E6;
+      --mario-yellow: #F8D038;
+      --mario-green: #43B047;
+      --mario-brick: #C84C0C;
+      --mario-sky: #5C94FC;
+    }
+
+    body {
+      font-family: 'Zen Maru Gothic', 'Noto Sans HK', sans-serif;
+      background-color: #2b1d12;
+      background-image: 
+        radial-gradient(#e76d14 15%, transparent 16%),
+        radial-gradient(#e76d14 15%, transparent 16%);
+      background-size: 32px 32px;
+      background-position: 0 0, 16px 16px;
+      color: #ffffff;
+      touch-action: none;
+      user-select: none;
+    }
+
+    /* Pixelated style block border */
+    .mario-box {
+      background: #f8dba3;
+      border: 4px solid #000000;
+      box-shadow: inset -4px -4px 0px #d4a359, inset 4px 4px 0px #ffffff, 6px 6px 0px #000000;
+      color: #2b1d12;
+    }
+
+    .mario-card {
+      background: #5C94FC;
+      border: 4px solid #000000;
+      box-shadow: inset -4px -4px 0px #2267E6, inset 4px 4px 0px #9dc2ff, 6px 6px 0px #000000;
+    }
+
+    .mario-btn-red {
+      background: #E52521;
+      border: 3px solid #000;
+      box-shadow: inset -3px -3px 0px #99100e, inset 3px 3px 0px #ff7b78, 4px 4px 0px #000;
+      color: #fff;
+    }
+    .mario-btn-red:active {
+      transform: translate(2px, 2px);
+      box-shadow: inset -2px -2px 0px #99100e, inset 2px 2px 0px #ff7b78, 2px 2px 0px #000;
+    }
+
+    .mario-btn-yellow {
+      background: #F8D038;
+      border: 3px solid #000;
+      box-shadow: inset -3px -3px 0px #b89200, inset 3px 3px 0px #fff494, 4px 4px 0px #000;
+      color: #000;
+    }
+    .mario-btn-yellow:active {
+      transform: translate(2px, 2px);
+      box-shadow: inset -2px -2px 0px #b89200, inset 2px 2px 0px #fff494, 2px 2px 0px #000;
+    }
+
+    .mario-btn-green {
+      background: #43B047;
+      border: 3px solid #000;
+      box-shadow: inset -3px -3px 0px #1e6921, inset 3px 3px 0px #88f08d, 4px 4px 0px #000;
+      color: #fff;
+    }
+    .mario-btn-green:active {
+      transform: translate(2px, 2px);
+      box-shadow: inset -2px -2px 0px #1e6921, inset 2px 2px 0px #88f08d, 2px 2px 0px #000;
+    }
+
+    .mario-btn-blue {
+      background: #2267E6;
+      border: 3px solid #000;
+      box-shadow: inset -3px -3px 0px #0d388a, inset 3px 3px 0px #79a8ff, 4px 4px 0px #000;
+      color: #fff;
+    }
+
+    .mario-btn-orange {
+      background: #e76d14;
+      border: 3px solid #000;
+      box-shadow: inset -3px -3px 0px #943e00, inset 3px 3px 0px #ff984f, 4px 4px 0px #000;
+      color: #fff;
+    }
+
+    .canvas-container {
+      touch-action: none;
+    }
+
+    @keyframes pulse-reject {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    .animate-reject {
+      animation: pulse-reject 1s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 md:p-4">
+
+  <!-- TOP HEADER & CONTROLLER -->
+  <header class="max-w-7xl mx-auto w-full mb-3">
+    <div class="mario-box p-3 md:p-4 rounded-2xl flex flex-wrap justify-between items-center gap-3">
+      
+      <!-- Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-12 h-12 rounded-xl bg-red-600 border-2 border-black flex items-center justify-center text-white font-black text-2xl shadow-md">
+          🍄
+        </div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-black text-red-600 tracking-wide">
+            梯形面積分層手寫投射大對決 🌟
+          </h1>
+        </div>
+      </div>
+
+      <!-- View Switcher (Whiteboard vs iPad Cockpits) -->
+      <div class="flex flex-wrap items-center gap-2 bg-amber-200/80 p-2 rounded-xl border-2 border-amber-800">
+        <button onclick="switchView('board')" id="btnViewBoard" class="mario-btn-yellow px-3 py-1.5 rounded-lg text-xs font-black transition">
+          🖥️ 電子白板總覽
+        </button>
+        <button onclick="switchView('g1')" id="btnViewG1" class="mario-btn-red px-2.5 py-1.5 rounded-lg text-xs font-black transition">
+          📱 第1組
+        </button>
+        <button onclick="switchView('g2')" id="btnViewG2" class="mario-btn-green px-2.5 py-1.5 rounded-lg text-xs font-black transition">
+          📱 第2組
+        </button>
+        <button onclick="switchView('g3')" id="btnViewG3" class="mario-btn-blue px-2.5 py-1.5 rounded-lg text-xs font-black transition">
+          📱 第3組
+        </button>
+        <button onclick="switchView('g4')" id="btnViewG4" class="mario-btn-yellow px-2.5 py-1.5 rounded-lg text-xs font-black transition">
+          📱 第4組
+        </button>
+      </div>
+
+      <!-- Level Selector (Only visible on Whiteboard Overview for Teacher Control) -->
+      <div id="teacherLevelControl" class="flex items-center gap-1.5 bg-amber-200/80 p-1.5 rounded-xl border-2 border-amber-800">
+        <span class="text-xs font-black text-amber-900 px-1">👑 教師指定任務：</span>
+        <button onclick="changeLevel(1)" id="btnLvl1" class="mario-btn-red px-2 py-1 rounded-md text-xs font-black">1</button>
+        <button onclick="changeLevel(2)" id="btnLvl2" class="bg-amber-100 text-amber-900 border border-amber-700 px-2 py-1 rounded-md text-xs font-black">2</button>
+        <button onclick="changeLevel(3)" id="btnLvl3" class="bg-amber-100 text-amber-900 border border-amber-700 px-2 py-1 rounded-md text-xs font-black">3</button>
+        <button onclick="changeLevel(4)" id="btnLvl4" class="bg-amber-100 text-amber-900 border border-amber-700 px-2 py-1 rounded-md text-xs font-black">4</button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- VIEW 1: MAIN BOARD OVERVIEW (WHITEBOARD & AIRPLAY GRID) -->
+  <main id="boardScreenView" class="max-w-7xl mx-auto w-full flex-1 space-y-4">
+    
+    <!-- Level Task Banner -->
+    <div class="mario-card p-4 md:p-5 rounded-2xl flex flex-wrap justify-between items-center gap-4 text-white">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span id="boardLevelBadge" class="bg-yellow-400 text-black border-2 border-black px-3 py-0.5 rounded-full text-xs font-black">
+            分層任務 1
+          </span>
+          <span class="text-xs font-bold text-yellow-200"><i class="fa-solid fa-tv"></i> 電子白板當前題目展示</span>
+        </div>
+        <h2 id="boardQuestionTitle" class="text-lg md:text-2xl font-black text-yellow-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+          任務 1: 請填滿圖形中，屬於梯形面積的範圍
+        </h2>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="triggerAirPlaySync()" class="mario-btn-green px-4 py-2 text-xs font-black rounded-xl flex items-center gap-2">
+          <i class="fa-solid fa-brands fa-airplay text-sm"></i> 同步 AirPlay 四組投射畫面
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 GROUPS AIRPLAY GRID ON WHITEBOARD -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="airplayGrid">
+      <!-- Dynamic Projection Cards -->
+    </div>
+
+  </main>
+
+  <!-- VIEW 2: IPAD HANDWRITING COCKPIT -->
+  <main id="ipadScreenView" class="hidden max-w-4xl mx-auto w-full flex-1 space-y-3">
+    
+    <!-- iPad Header -->
+    <div id="ipadHeader" class="mario-box p-3 rounded-2xl flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <span id="ipadGroupBadge" class="text-xs font-black px-3 py-1 rounded-lg border-2 border-black bg-red-500 text-white">
+          第一組 iPad
+        </span>
+        <span id="ipadLevelTag" class="text-xs font-black px-3 py-1 rounded-lg border-2 border-black bg-yellow-400 text-black">
+          任務 1/4
+        </span>
+      </div>
+      <div class="text-xs font-black text-amber-900 flex items-center gap-2">
+        ✏️ 請直接使用觸控筆或手指在圖形上繪畫作答
+      </div>
+    </div>
+
+    <!-- Rejection Alert Banner (Only shown if current task was rejected by teacher) -->
+    <div id="ipadRejectBanner" class="hidden bg-red-600 border-4 border-black text-white p-3 rounded-2xl flex items-center justify-between shadow-lg animate-reject">
+      <div class="flex items-center gap-3 font-black text-xs md:text-sm">
+        <span class="text-2xl">⚠️</span>
+        <span>老師要求重新作答！請修改或塗改答案後再次點擊提交。</span>
+      </div>
+      <button onclick="dismissRejectBanner()" class="bg-black text-yellow-300 border border-white text-xs px-2 py-1 rounded font-black">
+        明白 ✕
+      </button>
+    </div>
+
+    <!-- iPad Drawing Area & Tool Palette -->
+    <div class="mario-box p-4 rounded-2xl space-y-3">
+      
+      <p id="ipadQuestionText" class="text-base font-black text-amber-950 bg-amber-200/80 p-2 rounded-xl border border-amber-400">
+        任務 1: 請填滿圖形中，屬於梯形面積的範圍
+      </p>
+
+      <!-- Canvas Area -->
+      <div class="relative w-full bg-sky-200 rounded-xl border-4 border-black overflow-hidden flex justify-center items-center canvas-container min-h-[380px] shadow-inner">
+        <!-- Base SVG Layer (Question Background) -->
+        <svg id="ipadBaseSvg" class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 600 360" preserveAspectRatio="xMidYMid meet"></svg>
+        
+        <!-- Interactive Drawing Canvas Layer -->
+        <canvas id="ipadCanvas" width="600" height="360" class="relative z-10 cursor-crosshair w-full h-full"></canvas>
+      </div>
+
+      <!-- Drawing Controls & Tools -->
+      <div class="flex flex-wrap justify-between items-center gap-3 bg-amber-200/90 p-3 rounded-xl border-2 border-amber-800">
+        
+        <!-- Pen Type Selector -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button onclick="setPenMode('pen')" id="btnToolPen" class="mario-btn-red px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1">
+            <i class="fa-solid fa-pen-nib"></i> 細筆
+          </button>
+          <button onclick="setPenMode('brush')" id="btnToolBrush" class="mario-btn-yellow px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1">
+            <i class="fa-solid fa-paint-brush"></i> 彩色填色
+          </button>
+          <button onclick="setPenMode('dashed')" id="btnToolDashed" class="mario-btn-blue px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1">
+            <i class="fa-solid fa-ellipsis"></i> 虛線/間線
+          </button>
+          <button onclick="setPenMode('eraser')" id="btnToolEraser" class="bg-gray-700 text-white border-2 border-black px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1">
+            <i class="fa-solid fa-eraser"></i> 橡皮擦
+          </button>
+        </div>
+
+        <!-- Color Palette -->
+        <div class="flex items-center gap-1.5 bg-amber-100 p-1.5 rounded-xl border border-amber-400">
+          <span class="text-xs font-black text-amber-950">顏色：</span>
+          <button onclick="setColor('#E52521')" class="w-6 h-6 rounded-full bg-red-600 border-2 border-black focus:scale-125 transition"></button>
+          <button onclick="setColor('#F8D038')" class="w-6 h-6 rounded-full bg-yellow-400 border-2 border-black focus:scale-125 transition"></button>
+          <button onclick="setColor('#43B047')" class="w-6 h-6 rounded-full bg-green-600 border-2 border-black focus:scale-125 transition"></button>
+          <button onclick="setColor('#2267E6')" class="w-6 h-6 rounded-full bg-blue-600 border-2 border-black focus:scale-125 transition"></button>
+          <button onclick="setColor('#000000')" class="w-6 h-6 rounded-full bg-black border-2 border-white focus:scale-125 transition"></button>
+          <button onclick="setColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-black focus:scale-125 transition"></button>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+          <button onclick="clearCurrentCanvas()" class="bg-rose-700 hover:bg-rose-800 text-white border-2 border-black text-xs font-black px-3 py-1.5 rounded-lg shadow transition">
+            <i class="fa-solid fa-trash mr-1"></i> 清除
+          </button>
+          <button onclick="submitAnswerAndAirPlay()" class="mario-btn-green text-xs font-black px-4 py-1.5 rounded-lg flex items-center gap-1">
+            <i class="fa-solid fa-paper-plane"></i> 提交 AirPlay 投射
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    /* ===================================================================
+       AUDIO SYNTHESIZER (WEB AUDIO API)
+       =================================================================== */
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
+    }
+
+    function playBeep(freq, type, duration) {
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type || 'square';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) { }
+    }
+
+    function playCoinSound() {
+      playBeep(987.77, 'square', 0.08);
+      setTimeout(() => playBeep(1318.51, 'square', 0.25), 80);
+    }
+
+    function playSuccessFanfare() {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        setTimeout(() => playBeep(freq, 'triangle', 0.15), idx * 100);
+      });
+    }
+
+    function playRejectSound() {
+      playBeep(300, 'sawtooth', 0.15);
+      setTimeout(() => playBeep(180, 'sawtooth', 0.3), 120);
+    }
+
+    /* ===================================================================
+       DATA CONFIGURATION & STATE
+       =================================================================== */
+    const GROUPS = [
+      { id: 1, name: "第一組", btnClass: "mario-btn-red", textClass: "text-red-600", borderClass: "border-red-600" },
+      { id: 2, name: "第二組", btnClass: "mario-btn-green", textClass: "text-green-600", borderClass: "border-green-600" },
+      { id: 3, name: "第三組", btnClass: "mario-btn-blue", textClass: "text-blue-600", borderClass: "border-blue-600" },
+      { id: 4, name: "第四組", btnClass: "mario-btn-yellow", textClass: "text-amber-600", borderClass: "border-yellow-500" }
+    ];
+
+    const LEVELS = {
+      1: {
+        title: "任務 1：請填滿圖形中，屬於梯形面積的範圍",
+        instruction: "請點選「彩色填色」工具，將梯形內部的面積區域塗上顏色。",
+        bgType: "OUTLINE_ONLY"
+      },
+      2: {
+        title: "任務 2：請以間線（虛線）畫出圖形中的上底、下底及高",
+        instruction: "請切換至「虛線/間線」工具，在梯形圖上標示出「上底」、「下底」以及垂直的「高」。",
+        bgType: "FILLED"
+      },
+      3: {
+        title: "任務 3：請列出當中圖形的計算公式",
+        instruction: "圖中已給予上底 (6cm)、下底 (10cm)、高 (4cm)，請手寫出梯形面積公式 (如：(上底+下底)×高÷2)。",
+        bgType: "FILLED_WITH_DATA",
+        a: 6, b: 10, h: 4
+      },
+      4: {
+        title: "任務 4：請列式計算梯形的面積",
+        instruction: "請根據梯形長度，手寫完整的列式與步驟，並計算出最終面積數字 (cm²)。",
+        bgType: "FILLED_WITH_DATA_FORMULA",
+        a: 6, b: 10, h: 4
+      }
+    };
+
+    let activeView = "board";
+    let currentLevel = 1;
+
+    // Canvas drawing data per group and level
+    const groupCanvasData = {
+      1: { 1: null, 2: null, 3: null, 4: null },
+      2: { 1: null, 2: null, 3: null, 4: null },
+      3: { 1: null, 2: null, 3: null, 4: null },
+      4: { 1: null, 2: null, 3: null, 4: null }
+    };
+
+    // Rejection state per group and level
+    const groupStatus = {
+      1: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' },
+      2: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' },
+      3: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' },
+      4: { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending' }
+    };
+
+    /* CANVAS DRAWING VARS */
+    let canvas, ctx;
+    let isDrawing = false;
+    let currentPenMode = 'pen';
+    let currentColor = '#E52521';
+
+    /* ===================================================================
+       INITIALIZATION & SWITCHING
+       =================================================================== */
+    window.onload = function() {
+      initCanvas();
+      switchView('board');
+    };
+
+    function switchView(view) {
+      playCoinSound();
+      activeView = view;
+
+      const boardEl = document.getElementById("boardScreenView");
+      const ipadEl = document.getElementById("ipadScreenView");
+      const levelCtrl = document.getElementById("teacherLevelControl");
+
+      if (view === 'board') {
+        boardEl.classList.remove("hidden");
+        ipadEl.classList.add("hidden");
+        if (levelCtrl) levelCtrl.classList.remove("hidden");
+        renderBoardView();
+      } else {
+        boardEl.classList.add("hidden");
+        ipadEl.classList.remove("hidden");
+        if (levelCtrl) levelCtrl.classList.add("hidden");
+        renderIpadView();
+      }
+    }
+
+    function changeLevel(lvl) {
+      playCoinSound();
+      currentLevel = lvl;
+
+      [1, 2, 3, 4].forEach(l => {
+        const btn = document.getElementById(`btnLvl${l}`);
+        if (btn) {
+          if (l === lvl) {
+            btn.className = "mario-btn-red px-2 py-1 rounded-md text-xs font-black";
+          } else {
+            btn.className = "bg-amber-100 text-amber-900 border border-amber-700 px-2 py-1 rounded-md text-xs font-black";
+          }
+        }
+      });
+
+      if (activeView === 'board') {
+        renderBoardView();
+      } else {
+        renderIpadView();
+      }
+    }
+
+    /* ===================================================================
+       BOARD VIEW (ELECTRONIC WHITEBOARD & 4 AIRPLAY CARDS)
+       =================================================================== */
+    function renderBoardView() {
+      const lvl = LEVELS[currentLevel];
+      document.getElementById("boardLevelBadge").innerText = `分層任務 ${currentLevel}`;
+      document.getElementById("boardQuestionTitle").innerText = lvl.title;
+
+      const grid = document.getElementById("airplayGrid");
+      grid.innerHTML = "";
+
+      GROUPS.forEach((g) => {
+        const gId = g.id;
+        const savedDataUrl = groupCanvasData[gId][currentLevel];
+        const status = groupStatus[gId][currentLevel];
+
+        const card = document.createElement("div");
+        card.className = `mario-box p-4 rounded-2xl space-y-2 relative overflow-hidden`;
+
+        let canvasContentHtml = '';
+        if (savedDataUrl && status !== 'rejected') {
+          canvasContentHtml = `<img src="${savedDataUrl}" class="absolute inset-0 w-full h-full object-contain pointer-events-none z-10">`;
+        } else if (status === 'rejected') {
+          canvasContentHtml = `
+            <div class="absolute inset-0 bg-red-900/40 z-20 flex flex-col items-center justify-center p-2 text-center">
+              <div class="bg-red-600 text-white font-black text-sm px-3 py-1 rounded-lg border-2 border-black shadow">
+                ⚠️ 已退回要求重寫
+              </div>
+            </div>
+          `;
+        } else {
+          canvasContentHtml = `<div class="text-xs text-amber-900 font-black flex items-center gap-1 bg-amber-200/90 px-3 py-1.5 rounded-full border border-amber-600"><i class="fa-solid fa-spinner animate-spin"></i> 等待小組投射中...</div>`;
+        }
+
+        let badgeHtml = '';
+        if (status === 'submitted') {
+          badgeHtml = `<span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-green-500 text-white border-2 border-black">📡 已 AirPlay 投射</span>`;
+        } else if (status === 'rejected') {
+          badgeHtml = `<span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-red-600 text-white border-2 border-black">⚠️ 已駁回 / 請重試</span>`;
+        } else {
+          badgeHtml = `<span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900">⏳ 未提交</span>`;
+        }
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center border-b-2 border-amber-800 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-lg bg-amber-300 border-2 border-black text-black font-black flex items-center justify-center text-xs shadow">
+                0${gId}
+              </span>
+              <h3 class="font-black text-amber-950 text-base">${g.name} iPad 畫面</h3>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              ${badgeHtml}
+              <!-- REJECT BUTTON FOR TEACHER -->
+              <button onclick="rejectGroupAnswer(${gId})" class="mario-btn-orange text-xs px-2.5 py-1 rounded-lg font-black flex items-center gap-1 hover:brightness-110">
+                <i class="fa-solid fa-rotate-left"></i> 駁回 / 重寫
+              </button>
+            </div>
+          </div>
+
+          <!-- Whiteboard Display Card for Group -->
+          <div class="relative w-full bg-sky-200 rounded-xl border-2 border-black h-56 flex justify-center items-center overflow-hidden shadow-inner">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 600 360" preserveAspectRatio="xMidYMid meet">
+              ${getSvgBackgroundMarkup(lvl)}
+            </svg>
+            ${canvasContentHtml}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    /* REJECT GROUP ANSWER FUNCTION */
+    function rejectGroupAnswer(groupId) {
+      playRejectSound();
+      groupStatus[groupId][currentLevel] = 'rejected';
+      renderBoardView();
+    }
+
+    /* ===================================================================
+       IPAD VIEW & CANVAS DRAWING LOGIC
+       =================================================================== */
+    function renderIpadView() {
+      const groupIdx = parseInt(activeView.replace('g', '')) - 1;
+      const g = GROUPS[groupIdx];
+      const lvl = LEVELS[currentLevel];
+      const status = groupStatus[g.id][currentLevel];
+
+      const badge = document.getElementById("ipadGroupBadge");
+      badge.innerText = `${g.name} iPad`;
+
+      document.getElementById("ipadLevelTag").innerText = `任務 ${currentLevel}/4`;
+      document.getElementById("ipadQuestionText").innerText = `${lvl.title}（${lvl.instruction}）`;
+
+      // Check for Rejection Alert
+      const rejectBanner = document.getElementById("ipadRejectBanner");
+      if (status === 'rejected') {
+        rejectBanner.classList.remove("hidden");
+      } else {
+        rejectBanner.classList.add("hidden");
+      }
+
+      const svgContainer = document.getElementById("ipadBaseSvg");
+      svgContainer.innerHTML = getSvgBackgroundMarkup(lvl);
+
+      clearCurrentCanvas();
+      const savedDataUrl = groupCanvasData[g.id][currentLevel];
+      if (savedDataUrl) {
+        const img = new Image();
+        img.onload = function() {
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = savedDataUrl;
+      }
+    }
+
+    function dismissRejectBanner() {
+      playCoinSound();
+      document.getElementById("ipadRejectBanner").classList.add("hidden");
+    }
+
+    /* SVG BACKGROUND GENERATOR */
+    function getSvgBackgroundMarkup(lvl) {
+      const p1 = { x: 150, y: 280 };
+      const p2 = { x: 450, y: 280 };
+      const p3 = { x: 390, y: 120 };
+      const p4 = { x: 210, y: 120 };
+
+      if (lvl.bgType === "OUTLINE_ONLY") {
+        return `
+          <polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}" 
+                   fill="none" stroke="#E52521" stroke-width="5" stroke-dasharray="10,6" />
+          <text x="300" y="210" fill="#2b1d12" font-weight="900" font-size="18" text-anchor="middle">梯形內部範圍</text>
+        `;
+      } else if (lvl.bgType === "FILLED") {
+        return `
+          <polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}" 
+                   fill="rgba(248, 208, 56, 0.45)" stroke="#C84C0C" stroke-width="5" />
+        `;
+      } else if (lvl.bgType === "FILLED_WITH_DATA") {
+        return `
+          <polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}" 
+                   fill="rgba(248, 208, 56, 0.4)" stroke="#C84C0C" stroke-width="4" />
+          <line x1="230" y1="120" x2="230" y2="280" stroke="#E52521" stroke-width="3" stroke-dasharray="6,4"/>
+          <text x="300" y="100" fill="#E52521" font-weight="900" font-size="18" text-anchor="middle">上底 6 cm</text>
+          <text x="300" y="315" fill="#E52521" font-weight="900" font-size="18" text-anchor="middle">下底 10 cm</text>
+          <text x="240" y="205" fill="#2267E6" font-weight="900" font-size="16" text-anchor="start">高 4 cm</text>
+        `;
+      } else if (lvl.bgType === "FILLED_WITH_DATA_FORMULA") {
+        return `
+          <polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}" 
+                   fill="rgba(248, 208, 56, 0.3)" stroke="#C84C0C" stroke-width="4" />
+          <line x1="230" y1="120" x2="230" y2="280" stroke="#E52521" stroke-width="3" stroke-dasharray="6,4"/>
+          <text x="300" y="100" fill="#E52521" font-weight="900" font-size="17" text-anchor="middle">上底 6 cm</text>
+          <text x="300" y="315" fill="#E52521" font-weight="900" font-size="17" text-anchor="middle">下底 10 cm</text>
+          <text x="240" y="205" fill="#2267E6" font-weight="900" font-size="15" text-anchor="start">高 4 cm</text>
+          
+          <rect x="130" y="20" width="340" height="38" rx="10" fill="#F8D038" stroke="#000" stroke-width="3"/>
+          <text x="300" y="45" fill="#000" font-weight="900" font-size="16" text-anchor="middle">公式：(上底 + 下底) × 高 ÷ 2</text>
+        `;
+      }
+    }
+
+    /* CANVAS DRAWING CONTROLLER */
+    function initCanvas() {
+      canvas = document.getElementById("ipadCanvas");
+      ctx = canvas.getContext("2d");
+
+      canvas.addEventListener("mousedown", startDrawing);
+      canvas.addEventListener("mousemove", draw);
+      canvas.addEventListener("mouseup", stopDrawing);
+      canvas.addEventListener("mouseleave", stopDrawing);
+
+      canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+      canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+      canvas.addEventListener("touchend", stopDrawing);
+    }
+
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      const pos = getCanvasCoords(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getCanvasCoords(e);
+
+      ctx.lineWidth = currentPenMode === 'brush' ? 20 : currentPenMode === 'eraser' ? 28 : 5;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (currentPenMode === 'eraser') {
+        ctx.globalCompositeOperation = "destination-out";
+      } else {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = currentColor;
+      }
+
+      if (currentPenMode === 'dashed') {
+        ctx.setLineDash([10, 6]);
+      } else {
+        ctx.setLineDash([]);
+      }
+
+      if (currentPenMode === 'brush') {
+        ctx.globalAlpha = 0.45;
+      } else {
+        ctx.globalAlpha = 1.0;
+      }
+
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function stopDrawing() {
+      if (isDrawing) {
+        ctx.closePath();
+        isDrawing = false;
+      }
+    }
+
+    function handleTouchStart(e) {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        startDrawing(e.touches[0]);
+      }
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        draw(e.touches[0]);
+      }
+    }
+
+    function setPenMode(mode) {
+      playBeep(600, 'square', 0.05);
+      currentPenMode = mode;
+      ["pen", "brush", "dashed", "eraser"].forEach(m => {
+        const btn = document.getElementById(`btnTool${m.charAt(0).toUpperCase() + m.slice(1)}`);
+        if (m === mode) {
+          btn.classList.add("ring-4", "ring-yellow-300");
+        } else {
+          btn.classList.remove("ring-4", "ring-yellow-300");
+        }
+      });
+    }
+
+    function setColor(colorHex) {
+      playBeep(700, 'square', 0.05);
+      currentColor = colorHex;
+    }
+
+    function clearCurrentCanvas() {
+      playBeep(300, 'sawtooth', 0.1);
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    /* SUBMIT & AIRPLAY SYNC */
+    function submitAnswerAndAirPlay() {
+      const groupIdx = parseInt(activeView.replace('g', '')) - 1;
+      const gId = GROUPS[groupIdx].id;
+
+      groupCanvasData[gId][currentLevel] = canvas.toDataURL();
+      groupStatus[gId][currentLevel] = 'submitted';
+
+      playSuccessFanfare();
+      confetti({ particleCount: 50, spread: 70, origin: { y: 0.7 } });
+
+      setTimeout(() => {
+        switchView('board');
+      }, 500);
+    }
+
+    function triggerAirPlaySync() {
+      playSuccessFanfare();
+      confetti({ particleCount: 120, spread: 100, origin: { y: 0.5 } });
+    }
+  </script>
+</body>
+</html>
