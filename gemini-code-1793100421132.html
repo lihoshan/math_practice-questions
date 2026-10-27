@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>梯形面積分層手寫投射大對決</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti for Celebrations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Noto+Sans+TC:wght@600;800;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fce8c5;
+            background-image: 
+                radial-gradient(#f7a072 15%, transparent 16%),
+                radial-gradient(#f7a072 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .mario-card {
+            background: #fff8e7;
+            border: 4px solid #4a2810;
+            box-shadow: 6px 6px 0px #4a2810;
+            border-radius: 18px;
+        }
+
+        .mario-btn {
+            background: #ff595e;
+            color: white;
+            border: 3px solid #4a2810;
+            box-shadow: 0 5px 0 #4a2810;
+            border-radius: 12px;
+            font-weight: 900;
+            transition: all 0.1s ease;
+        }
+        .mario-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #4a2810;
+        }
+
+        .mario-btn-yellow {
+            background: #ffca3a;
+            color: #4a2810;
+            border: 3px solid #4a2810;
+            box-shadow: 0 5px 0 #4a2810;
+        }
+
+        .mario-btn-green {
+            background: #8ac926;
+            color: white;
+            border: 3px solid #4a2810;
+            box-shadow: 0 5px 0 #4a2810;
+        }
+
+        .mario-btn-blue {
+            background: #1976d2;
+            color: white;
+            border: 3px solid #4a2810;
+            box-shadow: 0 5px 0 #4a2810;
+        }
+
+        .mario-btn-reject {
+            background: #e63946;
+            color: white;
+            border: 3px solid #4a2810;
+            box-shadow: 0 4px 0 #4a2810;
+        }
+
+        .task-tab {
+            border: 3px solid #4a2810;
+            box-shadow: 3px 3px 0 #4a2810;
+            transition: all 0.15s ease;
+        }
+        .task-tab.active {
+            background-color: #ff595e !important;
+            color: white !important;
+            transform: scale(1.05);
+        }
+
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-5 text-gray-800">
+
+    <!-- Top Header -->
+    <header class="mario-card p-4 mb-5 flex flex-wrap justify-between items-center bg-amber-100">
+        <div class="flex items-center gap-3">
+            <div class="bg-red-500 border-2 border-black p-2 rounded-xl text-2xl shadow">🍄</div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-black text-red-600 tracking-wide">梯形面積分層手寫投射大對決 🌟</h1>
+            </div>
+        </div>
+
+        <!-- Mode Selector Switcher -->
+        <div class="flex items-center gap-2 mt-2 md:mt-0 bg-amber-200 p-2 rounded-2xl border-2 border-amber-800">
+            <span class="font-black text-amber-900 text-sm px-2">視角切換：</span>
+            <button onclick="switchView('whiteboard')" id="btn-view-wb" class="mario-btn mario-btn-yellow px-3 py-1.5 text-sm">🖥️ 電子白板總覽</button>
+            <button onclick="switchView('ipad', 1)" id="btn-view-g1" class="mario-btn px-3 py-1.5 text-sm">📱 第 1 組</button>
+            <button onclick="switchView('ipad', 2)" id="btn-view-g2" class="mario-btn px-3 py-1.5 text-sm">📱 第 2 組</button>
+            <button onclick="switchView('ipad', 3)" id="btn-view-g3" class="mario-btn px-3 py-1.5 text-sm">📱 第 3 組</button>
+            <button onclick="switchView('ipad', 4)" id="btn-view-g4" class="mario-btn px-3 py-1.5 text-sm">📱 第 4 組</button>
+        </div>
+    </header>
+
+    <!-- ================= VIEW 1: WHITEBOARD MAIN DASHBOARD ================= -->
+    <main id="view-whiteboard" class="space-y-5">
+        <!-- Task Switcher Bar (TEACHER ONLY CONTROL) -->
+        <div class="mario-card p-4 bg-yellow-100">
+            <div class="flex items-center justify-between mb-2">
+                <span class="font-black text-lg text-amber-900 flex items-center gap-2">
+                    <span>👑 老師題目控制台（點選切換全班任務）：</span>
+                </span>
+                <span id="wb-current-task-badge" class="bg-red-500 text-white px-3 py-1 rounded-full font-black text-sm border border-black">當前：任務 1</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <button onclick="setGlobalTask(1)" id="task-btn-1" class="task-tab mario-btn-yellow p-3 rounded-xl font-extrabold text-left active">
+                    <div class="text-xs opacity-75">任務 1</div>
+                    <div class="text-sm font-black">🎨 塗滿梯形面積</div>
+                </button>
+                <button onclick="setGlobalTask(2)" id="task-btn-2" class="task-tab mario-btn-yellow p-3 rounded-xl font-extrabold text-left">
+                    <div class="text-xs opacity-75">任務 2</div>
+                    <div class="text-sm font-black">📏 畫上底、下底與高</div>
+                </button>
+                <button onclick="setGlobalTask(3)" id="task-btn-3" class="task-tab mario-btn-yellow p-3 rounded-xl font-extrabold text-left">
+                    <div class="text-xs opacity-75">任務 3</div>
+                    <div class="text-sm font-black">✍️ 列出計算公式</div>
+                </button>
+                <button onclick="setGlobalTask(4)" id="task-btn-4" class="task-tab mario-btn-yellow p-3 rounded-xl font-extrabold text-left">
+                    <div class="text-xs opacity-75">任務 4</div>
+                    <div class="text-sm font-black">🧮 計算梯形面積</div>
+                </button>
+                <button onclick="setGlobalTask(5)" id="task-btn-5" class="task-tab mario-btn-yellow p-3 rounded-xl font-extrabold text-left col-span-2 md:col-span-1">
+                    <div class="text-xs opacity-75">任務 5</div>
+                    <div class="text-sm font-black">✂️ 平行四邊形分割</div>
+                </button>
+            </div>
+            <!-- Task Question Banner -->
+            <div class="mt-3 bg-white p-3 rounded-xl border-2 border-amber-800 text-base font-bold text-amber-900 flex items-center gap-2">
+                <span class="text-xl">❓</span>
+                <span id="wb-question-text">任務 1：請塗滿圖形中屬於梯形面積的範圍。</span>
+            </div>
+        </div>
+
+        <!-- 4 Groups AirPlay Projection Quad-Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Group 1 Slot -->
+            <div class="mario-card p-3 relative">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="bg-red-500 text-white font-black px-3 py-1 rounded-lg text-sm border border-black">第 1 組 AirPlay 畫面</span>
+                    <div class="flex items-center gap-2">
+                        <span id="status-g1" class="text-xs font-black bg-gray-200 text-gray-700 px-2 py-1 rounded-md border">⏳ 未提交</span>
+                        <button onclick="rejectGroupAnswer(1)" class="mario-btn-reject text-xs px-2 py-1 rounded-md font-black flex items-center gap-1">🔄 駁回/重寫</button>
+                    </div>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-1 border-2 border-amber-200 relative aspect-[4/3] flex items-center justify-center">
+                    <img id="proj-img-1" class="w-full h-full object-contain hidden" alt="Group 1 projection">
+                    <div id="proj-placeholder-1" class="text-center text-amber-800/50 font-bold text-sm">
+                        📱 等待第 1 組 AirPlay 投射...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 2 Slot -->
+            <div class="mario-card p-3 relative">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="bg-blue-600 text-white font-black px-3 py-1 rounded-lg text-sm border border-black">第 2 組 AirPlay 畫面</span>
+                    <div class="flex items-center gap-2">
+                        <span id="status-g2" class="text-xs font-black bg-gray-200 text-gray-700 px-2 py-1 rounded-md border">⏳ 未提交</span>
+                        <button onclick="rejectGroupAnswer(2)" class="mario-btn-reject text-xs px-2 py-1 rounded-md font-black flex items-center gap-1">🔄 駁回/重寫</button>
+                    </div>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-1 border-2 border-amber-200 relative aspect-[4/3] flex items-center justify-center">
+                    <img id="proj-img-2" class="w-full h-full object-contain hidden" alt="Group 2 projection">
+                    <div id="proj-placeholder-2" class="text-center text-amber-800/50 font-bold text-sm">
+                        📱 等待第 2 組 AirPlay 投射...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 3 Slot -->
+            <div class="mario-card p-3 relative">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="bg-green-600 text-white font-black px-3 py-1 rounded-lg text-sm border border-black">第 3 組 AirPlay 畫面</span>
+                    <div class="flex items-center gap-2">
+                        <span id="status-g3" class="text-xs font-black bg-gray-200 text-gray-700 px-2 py-1 rounded-md border">⏳ 未提交</span>
+                        <button onclick="rejectGroupAnswer(3)" class="mario-btn-reject text-xs px-2 py-1 rounded-md font-black flex items-center gap-1">🔄 駁回/重寫</button>
+                    </div>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-1 border-2 border-amber-200 relative aspect-[4/3] flex items-center justify-center">
+                    <img id="proj-img-3" class="w-full h-full object-contain hidden" alt="Group 3 projection">
+                    <div id="proj-placeholder-3" class="text-center text-amber-800/50 font-bold text-sm">
+                        📱 等待第 3 組 AirPlay 投射...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 4 Slot -->
+            <div class="mario-card p-3 relative">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="bg-purple-600 text-white font-black px-3 py-1 rounded-lg text-sm border border-black">第 4 組 AirPlay 畫面</span>
+                    <div class="flex items-center gap-2">
+                        <span id="status-g4" class="text-xs font-black bg-gray-200 text-gray-700 px-2 py-1 rounded-md border">⏳ 未提交</span>
+                        <button onclick="rejectGroupAnswer(4)" class="mario-btn-reject text-xs px-2 py-1 rounded-md font-black flex items-center gap-1">🔄 駁回/重寫</button>
+                    </div>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-1 border-2 border-amber-200 relative aspect-[4/3] flex items-center justify-center">
+                    <img id="proj-img-4" class="w-full h-full object-contain hidden" alt="Group 4 projection">
+                    <div id="proj-placeholder-4" class="text-center text-amber-800/50 font-bold text-sm">
+                        📱 等待第 4 組 AirPlay 投射...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ================= VIEW 2: IPAD STUDENT CANVAS WORKSPACE ================= -->
+    <main id="view-ipad" class="hidden space-y-4">
+        <!-- Rejection Warning Alert Banner -->
+        <div id="ipad-rejected-banner" class="hidden bg-red-500 text-white p-3 rounded-2xl border-4 border-black text-center font-black text-lg animate-bounce shadow-lg">
+            ⚠️ 老師的要求：作品被駁回，請根據指示進行修改後再次提交！
+        </div>
+
+        <div class="mario-card p-4 bg-orange-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+            <div>
+                <span id="ipad-group-title" class="bg-red-500 text-white font-black px-3 py-1 rounded-lg text-base border border-black">📱 第 1 組作答面板</span>
+                <h2 id="ipad-task-title" class="text-xl font-black text-amber-900 mt-2">任務 1：塗滿梯形面積</h2>
+                <p id="ipad-task-desc" class="text-sm font-bold text-amber-800">請用彩色畫筆塗滿圖形中屬於梯形面積的範圍。</p>
+            </div>
+            <button onclick="submitToAirPlay()" class="mario-btn mario-btn-green px-5 py-3 text-lg font-black flex items-center gap-2 self-end md:self-auto">
+                <span>🚀 提交並 AirPlay 投射</span>
+            </button>
+        </div>
+
+        <!-- Canvas and Drawing Tools -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <!-- Toolbar Side Panel -->
+            <div class="mario-card p-4 space-y-4 bg-yellow-50 lg:col-span-1 flex flex-col justify-between">
+                <div>
+                    <h3 class="font-black text-amber-900 text-md mb-2 border-b-2 border-amber-800 pb-1">🛠️ 繪圖工具箱</h3>
+                    
+                    <!-- Pen Mode Selector -->
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <button onclick="setTool('pen')" id="tool-pen" class="mario-btn mario-btn-yellow p-2 text-xs font-black active">✏️ 細筆</button>
+                        <button onclick="setTool('fill')" id="tool-fill" class="mario-btn mario-btn-yellow p-2 text-xs font-black">🎨 填色筆</button>
+                        <button onclick="setTool('dash')" id="tool-dash" class="mario-btn mario-btn-yellow p-2 text-xs font-black">✂️ 虛線/間線</button>
+                        <button onclick="setTool('eraser')" id="tool-eraser" class="mario-btn mario-btn-yellow p-2 text-xs font-black">🧹 橡皮擦</button>
+                    </div>
+
+                    <!-- Color Picker -->
+                    <div class="mb-3">
+                        <label class="block font-black text-xs text-amber-900 mb-1">🎨 顏色選擇：</label>
+                        <div class="flex gap-2">
+                            <button onclick="setColor('#e63946')" class="w-8 h-8 rounded-full bg-red-500 border-2 border-black shadow"></button>
+                            <button onclick="setColor('#1d3557')" class="w-8 h-8 rounded-full bg-blue-900 border-2 border-black shadow"></button>
+                            <button onclick="setColor('#2a9d8f')" class="w-8 h-8 rounded-full bg-teal-600 border-2 border-black shadow"></button>
+                            <button onclick="setColor('#e9c46a')" class="w-8 h-8 rounded-full bg-yellow-400 border-2 border-black shadow"></button>
+                            <button onclick="setColor('#ff006e')" class="w-8 h-8 rounded-full bg-pink-500 border-2 border-black shadow"></button>
+                        </div>
+                    </div>
+
+                    <!-- Brush Size Slider -->
+                    <div class="mb-3">
+                        <label class="block font-black text-xs text-amber-900 mb-1">📐 筆觸粗細：</label>
+                        <input type="range" id="brush-size" min="2" max="30" value="6" class="w-full accent-red-500">
+                    </div>
+                </div>
+
+                <button onclick="clearCurrentCanvas()" class="mario-btn bg-gray-600 text-white p-2.5 text-sm font-black w-full">
+                    🗑️ 清除重畫
+                </button>
+            </div>
+
+            <!-- Canvas Touch Pad Container -->
+            <div class="mario-card p-2 bg-white lg:col-span-3 flex items-center justify-center">
+                <canvas id="student-canvas" width="800" height="600" class="w-full h-auto bg-amber-50/50 rounded-xl border-2 border-amber-200 cursor-crosshair"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // State variables
+        let currentView = 'whiteboard'; // 'whiteboard' or 'ipad'
+        let currentGroup = 1; 
+        let globalTask = 1; 
+
+        // Tool state
+        let currentTool = 'pen'; // 'pen', 'fill', 'dash', 'eraser'
+        let currentColor = '#e63946';
+        let brushLineWidth = 6;
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Group Answers storage (Data URLs & rejection statuses)
+        const groupCanvasData = { 1: null, 2: null, 3: null, 4: null };
+        const groupRejected = { 1: false, 2: false, 3: false, 4: false };
+
+        // Task Descriptions
+        const taskInfo = {
+            1: { title: "任務 1：塗滿梯形面積", desc: "請用彩色填色筆或畫筆，塗滿圖形中屬於梯形面積的範圍。" },
+            2: { title: "任務 2：標示上底、下底與高", desc: "請使用「虛線/間線」工具，畫出梯形中的上底、下底及高的線條。" },
+            3: { title: "任務 3：列出計算公式", desc: "請用筆在畫布上手寫出計算梯形面積的中文/代數公式。" },
+            4: { title: "任務 4：列式計算梯形面積", desc: "請根據圖形顯示的邊長數字，在畫布上列式並計算出最終面積數字。" },
+            5: { title: "任務 5：平行四邊形分割", desc: "給予填滿的平行四邊形，請學生以筆劃線將其分割為兩個梯形。" }
+        };
+
+        // DOM elements
+        const canvas = document.getElementById('student-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Audio Context Synthesizer (Mario-style SFX)
+        function playSound(type) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'submit') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (type === 'reject') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                }
+            } catch(e) { console.log(e); }
+        }
+
+        // View Switching
+        function switchView(viewMode, groupNum = 1) {
+            currentView = viewMode;
+            currentGroup = groupNum;
+
+            document.getElementById('view-whiteboard').classList.add('hidden');
+            document.getElementById('view-ipad').classList.add('hidden');
+
+            if (viewMode === 'whiteboard') {
+                document.getElementById('view-whiteboard').classList.remove('hidden');
+            } else {
+                document.getElementById('view-ipad').classList.remove('hidden');
+                document.getElementById('ipad-group-title').innerText = `📱 第 ${groupNum} 組作答面板`;
+                
+                // Show/Hide Rejection Banner
+                const banner = document.getElementById('ipad-rejected-banner');
+                if (groupRejected[groupNum]) {
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+
+                updateIpadTaskUI();
+                loadOrDrawCanvasBackground();
+            }
+        }
+
+        // Global Task Switcher (Teacher Whiteboard Only)
+        function setGlobalTask(taskNum) {
+            globalTask = taskNum;
+            
+            // Update WB Badges and Active Buttons
+            document.getElementById('wb-current-task-badge').innerText = `當前：任務 ${taskNum}`;
+            document.getElementById('wb-question-text').innerText = `${taskInfo[taskNum].title}：${taskInfo[taskNum].desc}`;
+
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`task-btn-${i}`);
+                if (i === taskNum) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            }
+
+            // Clear submitted projections upon task change
+            for (let g = 1; g <= 4; g++) {
+                groupCanvasData[g] = null;
+                groupRejected[g] = false;
+                document.getElementById(`proj-img-${g}`).classList.add('hidden');
+                document.getElementById(`proj-placeholder-${g}`).classList.remove('hidden');
+                document.getElementById(`status-g${g}`).innerText = '⏳ 未提交';
+                document.getElementById(`status-g${g}`).className = 'text-xs font-black bg-gray-200 text-gray-700 px-2 py-1 rounded-md border';
+            }
+
+            if (currentView === 'ipad') {
+                updateIpadTaskUI();
+                clearCurrentCanvas();
+            }
+        }
+
+        function updateIpadTaskUI() {
+            document.getElementById('ipad-task-title').innerText = taskInfo[globalTask].title;
+            document.getElementById('ipad-task-desc').innerText = taskInfo[globalTask].desc;
+        }
+
+        // Draw Geometry Background Templates on Canvas
+        function drawBackgroundTemplate() {
+            ctx.save();
+            ctx.strokeStyle = "#4a2810";
+            ctx.fillStyle = "#fefae0";
+            ctx.lineWidth = 4;
+
+            if (globalTask === 5) {
+                // Task 5: Filled Parallelogram
+                ctx.beginPath();
+                ctx.moveTo(220, 180);
+                ctx.lineTo(620, 180);
+                ctx.lineTo(520, 420);
+                ctx.lineTo(120, 420);
+                ctx.closePath();
+                ctx.fillStyle = "#ffd166"; // Fill color
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = "#4a2810";
+                ctx.font = "bold 20px Noto Sans TC";
+                ctx.fillText("平行四邊形", 340, 310);
+            } else {
+                // Tasks 1 to 4: Trapezoid Template
+                ctx.beginPath();
+                ctx.moveTo(250, 180);
+                ctx.lineTo(550, 180);
+                ctx.lineTo(680, 420);
+                ctx.lineTo(120, 420);
+                ctx.closePath();
+
+                if (globalTask === 1) {
+                    ctx.stroke(); // Outline only
+                } else {
+                    ctx.fillStyle = "#ffe3a8";
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                // Add Labels & Dimensions for Tasks 3 & 4
+                if (globalTask === 3 || globalTask === 4) {
+                    ctx.fillStyle = "#d90429";
+                    ctx.font = "bold 22px Noto Sans TC";
+                    
+                    // Top Base
+                    ctx.fillText("上底 = 6 cm", 330, 160);
+                    // Bottom Base
+                    ctx.fillText("下底 = 10 cm", 330, 455);
+
+                    // Height dashed line
+                    ctx.beginPath();
+                    ctx.setLineDash([6, 6]);
+                    ctx.moveTo(250, 180);
+                    ctx.lineTo(250, 420);
+                    ctx.strokeStyle = "#d90429";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    // Height Label
+                    ctx.fillText("高 = 5 cm", 150, 300);
+                }
+            }
+            ctx.restore();
+        }
+
+        function loadOrDrawCanvasBackground() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackgroundTemplate();
+
+            // Reload saved drawing if available
+            if (groupCanvasData[currentGroup]) {
+                const img = new Image();
+                img.onload = () => ctx.drawImage(img, 0, 0);
+                img.src = groupCanvasData[currentGroup];
+            }
+        }
+
+        // Canvas Drawing Controls
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('#tool-pen, #tool-fill, #tool-dash, #tool-eraser').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tool-${tool}`).classList.add('active');
+        }
+
+        function setColor(hex) {
+            currentColor = hex;
+        }
+
+        document.getElementById('brush-size').addEventListener('input', (e) => {
+            brushLineWidth = e.target.value;
+        });
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+
+            const pos = getPos(e);
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+
+            if (currentTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineWidth = brushLineWidth * 2;
+                ctx.stroke();
+            } else if (currentTool === 'fill') {
+                ctx.globalAlpha = 0.35;
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushLineWidth * 3;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            } else if (currentTool === 'dash') {
+                ctx.setLineDash([10, 10]);
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushLineWidth;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            } else {
+                // Regular Pen
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushLineWidth;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            ctx.restore();
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Canvas Event Listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function clearCurrentCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackgroundTemplate();
+            groupCanvasData[currentGroup] = null;
+        }
+
+        // AirPlay Submit Function
+        function submitToAirPlay() {
+            const dataURL = canvas.toDataURL();
+            groupCanvasData[currentGroup] = dataURL;
+            groupRejected[currentGroup] = false; // Reset rejection status
+
+            // Update Projection Slot UI
+            const projImg = document.getElementById(`proj-img-${currentGroup}`);
+            projImg.src = dataURL;
+            projImg.classList.remove('hidden');
+            document.getElementById(`proj-placeholder-${currentGroup}`).classList.add('hidden');
+
+            const statusBadge = document.getElementById(`status-g${currentGroup}`);
+            statusBadge.innerText = '✅ 已 AirPlay 投射';
+            statusBadge.className = 'text-xs font-black bg-green-500 text-white px-2 py-1 rounded-md border';
+
+            document.getElementById('ipad-rejected-banner').classList.add('hidden');
+
+            playSound('submit');
+            confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+
+            alert(`🎉 第 ${currentGroup} 組已成功 AirPlay 投射至電子白板！`);
+        }
+
+        // Teacher Reject Function (From Whiteboard)
+        function rejectGroupAnswer(groupNum) {
+            groupRejected[groupNum] = true;
+            
+            const statusBadge = document.getElementById(`status-g${groupNum}`);
+            statusBadge.innerText = '⚠️ 已駁回 / 請重寫';
+            statusBadge.className = 'text-xs font-black bg-red-600 text-white px-2 py-1 rounded-md border animate-pulse';
+
+            playSound('reject');
+
+            if (currentView === 'ipad' && currentGroup === groupNum) {
+                document.getElementById('ipad-rejected-banner').classList.remove('hidden');
+            }
+
+            alert(`🔄 已駁回第 ${groupNum} 組的作答，已通知該組重寫提交！`);
+        }
+
+        // Initial setup
+        window.onload = () => {
+            setGlobalTask(1);
+        };
+    </script>
+</body>
+</html>
